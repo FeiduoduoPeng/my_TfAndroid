@@ -35,12 +35,17 @@ public class TF_Caculation_Thread extends Thread {
     static final int numClasses = 2000;
 
     private Bitmap bitmap;
-    private Bitmap resized_bitmap;
+    private Bitmap resized_bitmap;              //resized_bitmap which has a shape of inputSize X inputSize
     private String[] OUTPUT_NODES = new String[] {OUTPUT_NODE};
     private TensorFlowInferenceInterface inferenceInterface=null;
     private Handler threadHandler;
     private Vector<String> labels = new Vector<>();
 
+    /**Constructure Function
+     * @param btm           a bitmap from camera
+     * @param assetManager  ok
+     * @param mHandler      a Handler to send message to the UI thread to finish task which update the UI
+     * */
     TF_Caculation_Thread(Bitmap btm, AssetManager assetManager, Handler mHandler){
         super();
         bitmap = btm;
@@ -57,10 +62,13 @@ public class TF_Caculation_Thread extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         inferenceInterface = new TensorFlowInferenceInterface(assetManager, MODEL_FILE);
     }
 
+    /**This function is to fill a bitmap into a square
+     *@param srcBmp       the source of the bitmap
+     *@param cfg          the Config of the original bitmap, from the Class Bitmap.Config
+     * */
     private static Bitmap createSquaredBitmap(Bitmap srcBmp, Bitmap.Config cfg) {
         int dim = Math.max(srcBmp.getWidth(), srcBmp.getHeight());
         Bitmap dstBmp = Bitmap.createBitmap(dim, dim, cfg);
@@ -72,27 +80,20 @@ public class TF_Caculation_Thread extends Thread {
         return dstBmp;
     }
 
+    /**This function classify a bitmap and return an array of result of caculation
+     * @param btm a bitmap need to be classied
+     * @return      an array of result
+     * */
     public float[] classify(Bitmap btm){
-        //int array_length = input_data.length;
+        int[] intValues = new int[inputSize * inputSize] ;
+        float[] floatValues = new float[inputSize*inputSize*3];
         float[] output_array = new float[numClasses];
-        Log.e("test","before resize");
-        Bitmap.Config btm_config = btm.getConfig();
-        Bitmap square_bitmap = createSquaredBitmap(btm, btm_config);
-        Log.e("test","after resize");
-
-        int width = square_bitmap.getWidth();
-        int height = square_bitmap.getHeight();
-        Log.e("test", String.format("W H: %d %d",width,height));
+        Bitmap square_bitmap = createSquaredBitmap(btm, btm.getConfig());
 
         resized_bitmap = Bitmap.createBitmap(square_bitmap,0,0,inputSize,inputSize);
-
-        //prepare the data: convert the format of bitmap into 2 dimension array
-        int[] intValues = new int[inputSize * inputSize] ;//= new int[inputSize*inputSize];
-        float[] floatValues = new float[inputSize*inputSize*3];
-
         resized_bitmap.getPixels(intValues, 0, resized_bitmap.getWidth(), 0, 0, resized_bitmap.getWidth(), resized_bitmap.getHeight());
 
-        //如果照片的像素 数目大于inputSize^2,则舍去多余部分,相反,则用0补足
+        //preprocess the bitmap, normalize the data and make it to the suitable shape to suit the input tensor
         for (int i = 0; i < inputSize*inputSize; ++i) {
             final int val;
             val = intValues[i];
@@ -114,24 +115,23 @@ public class TF_Caculation_Thread extends Thread {
 
         try{
             result_array = classify(bitmap);
+            //get the index of most probability of classify
             for (int i=0; i< result_array.length; i++) {
                 if(result_array[i] > max_value){
                     max_value= result_array[i];
                     max_index = i;
                 }
             }
-            Log.e("test",String.format("max_value: %f \n max_indec: %d",max_value, max_index));
-            //Log.e("test",String.format("result is %f",result_array[0]));
 
             Message msg_text = new Message();
             msg_text.what = 0;
-            msg_text.obj = labels.get(max_index);
-            threadHandler.sendMessage(msg_text);
+            msg_text.obj = labels.get(max_index);       //translate into human readable string
+            threadHandler.sendMessage(msg_text) ;       //send the text message, it will show the result of classify
 
             Message msg_image = new Message();
             msg_image.what = 1;
             msg_image.obj = resized_bitmap;
-            threadHandler.sendMessage(msg_image);
+            threadHandler.sendMessage(msg_image);       //sned the bitmap message, it will show the original image
 
         }catch(Exception e){
             e.printStackTrace();

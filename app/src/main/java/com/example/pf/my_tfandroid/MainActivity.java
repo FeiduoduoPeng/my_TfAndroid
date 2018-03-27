@@ -25,8 +25,9 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_CODE_IMAGE_CAPTURE = 1;
     public ImageView imageView;
     public TextView textView;
+    public Handler mHandler;
 
-    Handler mHandler = new Handler(){
+    class myHandler extends Handler{
         @Override
         public void handleMessage(Message msg){
             super.handleMessage(msg);
@@ -38,11 +39,12 @@ public class MainActivity extends AppCompatActivity {
                 case 1:
                     Bitmap img =(Bitmap) msg.obj;
                     imageView.setImageBitmap(img);
+                    break;
                 default:
                     break;
             }
         }
-    };
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = findViewById(R.id.imageView);
         textView = findViewById(R.id.textView);
+        mHandler =  new myHandler();
     }
 
     @Override
