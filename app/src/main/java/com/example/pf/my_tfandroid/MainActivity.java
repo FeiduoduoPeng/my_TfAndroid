@@ -30,11 +30,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void handleMessage(Message msg){
             super.handleMessage(msg);
-            String data = (String) msg.obj;
             switch (msg.what){
                 case 0:
-                    textView.setText(data);
+                    String str = (String) msg.obj;
+                    textView.setText(str);
                     break;
+                case 1:
+                    Bitmap img =(Bitmap) msg.obj;
+                    imageView.setImageBitmap(img);
                 default:
                     break;
             }
